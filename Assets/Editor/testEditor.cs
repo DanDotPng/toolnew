@@ -51,12 +51,13 @@ public class testEditor : EditorWindow
     void DuringSceneGUI(SceneView sceneView)
     {
         Transform cTransform = sceneView.camera.transform;
-
+        //repaints when mouse moves
         if(Event.current.type == EventType.MouseMove)
         {
             sceneView.Repaint();
         }
 
+        //tracks mouse moment
         Ray ray = HandleUtility.GUIPointToWorldRay(Event.current.mousePosition);
 
         //raycast from the front of the camera
