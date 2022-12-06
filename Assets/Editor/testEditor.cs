@@ -36,7 +36,7 @@ public class testEditor : EditorWindow
         so.Update();
         EditorGUILayout.PropertyField(propRadius);
         EditorGUILayout.PropertyField(propSpawnCount);
-       if(so.ApplyModifiedProperties())
+        if (so.ApplyModifiedProperties())
         {
             //repaints imediately after adjusting numbers
             SceneView.RepaintAll();
@@ -46,26 +46,33 @@ public class testEditor : EditorWindow
         gObject = EditorGUILayout.ObjectField(gObject, typeof(Object), true);
         EditorGUILayout.EndHorizontal();
     }
-  
+
     //while the scene is active
     void DuringSceneGUI(SceneView sceneView)
     {
         Transform cTransform = sceneView.camera.transform;
 
+        if(Event.current.type == EventType.MouseMove)
+        {
+            sceneView.Repaint();
+        }
+
+        Ray ray = HandleUtility.GUIPointToWorldRay(Event.current.mousePosition);
+
         //raycast from the front of the camera
-        Ray ray = new Ray(cTransform.position, cTransform.forward);
+        //  Ray ray = new Ray(cTransform.position, cTransform.forward);
         // if hit
-        if(Physics.Raycast( ray, out RaycastHit hit))
+        if (Physics.Raycast(ray, out RaycastHit hit))
         {
             //draw a little line and a circle based around the hit point
             Handles.DrawAAPolyLine(6, hit.point, hit.point + hit.normal);
             Handles.DrawWireDisc(hit.point, hit.normal, radius);
-          //  Handles.DrawWireDisc(Vector3.zero, Vector3.up, radius);
+            //  Handles.DrawWireDisc(Vector3.zero, Vector3.up, radius);
 
         }
 
     }
-    
+
 
 
 
