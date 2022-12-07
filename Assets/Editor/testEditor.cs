@@ -14,6 +14,7 @@ public class testEditor : EditorWindow
     public float amount = 2;
     public float spawnCount;
 
+    bool random;
     bool single;
 
     //disables GUI when not using the scene view. so like if you click out or something.
@@ -48,13 +49,15 @@ public class testEditor : EditorWindow
 
         GUILayout.BeginHorizontal();
 
-        if (GUILayout.Button("Random"))
+        if (GUILayout.Toggle(random, "Random"))
         {
             single = false;
+            random = true;
         }
-        if (GUILayout.Button("Single"))
+        if (GUILayout.Toggle(single, "Single"))
         {
             single = true;
+            random = false;
         }
         GUILayout.EndHorizontal();
 
