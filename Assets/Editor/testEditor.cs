@@ -76,7 +76,7 @@ public class testEditor : EditorWindow
 
 
         bool altControl = (Event.current.modifiers & EventModifiers.Control) != 0;
-        if (Event.current.type == EventType.ScrollWheel && altControl == true)
+        if (Event.current.type == EventType.ScrollWheel && altControl == true & single  != true)
         {
             float dir = Mathf.Sign(Event.current.delta.y);
 
