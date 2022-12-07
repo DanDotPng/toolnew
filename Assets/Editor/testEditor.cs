@@ -5,7 +5,8 @@ using UnityEngine;
 using UnityEditor;
 
 public class testEditor : EditorWindow
-{//This creates the menu at the top. We use the name "tools" since thats a common library name and prevents clutter.
+{
+    //This creates the menu at the top. We use the name "tools" since thats a common library name and prevents clutter.
     [MenuItem("Tools/Test Library")]
     public static void ShowWindow() => GetWindow<testEditor>();
 
@@ -42,6 +43,8 @@ public class testEditor : EditorWindow
             SceneView.RepaintAll();
         }
 
+         
+
         EditorGUILayout.BeginHorizontal();
         gObject = EditorGUILayout.ObjectField(gObject, typeof(Object), true);
         EditorGUILayout.EndHorizontal();
@@ -57,6 +60,24 @@ public class testEditor : EditorWindow
             sceneView.Repaint();
         }
 
+
+        bool altControl = (Event.current.modifiers & EventModifiers.Control) != 0;
+        if (Event.current.type == EventType.ScrollWheel && altControl == true)
+        {
+            float dir = Mathf.Sign(Event.current.delta.y);
+
+            so.Update();
+            propRadius.floatValue += dir * 1f;
+            so.ApplyModifiedProperties();
+            Repaint();
+
+            //Scroll, consume event, no longer mouse wheel just change radius.
+             
+            Event.current.Use();
+           
+
+
+        }
         //tracks mouse moment
         Ray ray = HandleUtility.GUIPointToWorldRay(Event.current.mousePosition);
 
