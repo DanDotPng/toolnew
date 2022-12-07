@@ -14,6 +14,8 @@ public class testEditor : EditorWindow
     public float amount = 2;
     public float spawnCount;
 
+    bool single;
+
     //disables GUI when not using the scene view. so like if you click out or something.
     void OnEnable()
     {
@@ -43,7 +45,19 @@ public class testEditor : EditorWindow
             SceneView.RepaintAll();
         }
 
-         
+
+        GUILayout.BeginHorizontal();
+
+        if (GUILayout.Button("Random"))
+        {
+            single = false;
+        }
+        if (GUILayout.Button("Single"))
+        {
+            single = true;
+        }
+        GUILayout.EndHorizontal();
+
 
         EditorGUILayout.BeginHorizontal();
         gObject = EditorGUILayout.ObjectField(gObject, typeof(Object), true);
@@ -86,10 +100,21 @@ public class testEditor : EditorWindow
         // if hit
         if (Physics.Raycast(ray, out RaycastHit hit))
         {
-            //draw a little line and a circle based around the hit point
-            Handles.DrawAAPolyLine(6, hit.point, hit.point + hit.normal);
-            Handles.DrawWireDisc(hit.point, hit.normal, radius);
-            //  Handles.DrawWireDisc(Vector3.zero, Vector3.up, radius);
+            if (single)
+            {
+                //draw a little line and a circle based around the hit point
+                Handles.DrawAAPolyLine(6, hit.point, hit.point + hit.normal);
+            }
+            else
+            {
+                //  Handles.DrawWireDisc(Vector3.zero, Vector3.up, radius);
+                Handles.DrawWireDisc(hit.point, hit.normal, radius);
+            }
+
+             
+           
+            
+            
 
         }
 
