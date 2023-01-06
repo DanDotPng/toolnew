@@ -12,9 +12,9 @@ public class testEditor : EditorWindow
 
     public float radius = 2f;
     public float amount = 2;
-    public float spawnCount;
+    public int spawnCount;
 
-    bool random;
+    bool random = true;
     bool single;
 
     //disables GUI when not using the scene view. so like if you click out or something.
@@ -24,28 +24,47 @@ public class testEditor : EditorWindow
         so = new SerializedObject(this);
         propRadius = so.FindProperty("radius");
         propSpawnCount = so.FindProperty("spawnCount");
-
+        propSpawnPrefab = so.FindProperty("spawnPrefab");
+        GenerateRandomPoints();
         SceneView.duringSceneGui += DuringSceneGUI;
     }
 
     void OnDisable() => SceneView.duringSceneGui -= DuringSceneGUI;
 
-    public Object gObject;
+    public GameObject spawnPrefab = null;
 
     SerializedObject so;
     SerializedProperty propRadius;
     SerializedProperty propSpawnCount;
+    SerializedProperty propSpawnPrefab;
+
+    Vector2[] randomPoints;
+
+    void GenerateRandomPoints()
+    {
+        randomPoints = new Vector2[spawnCount];
+        for (int i = 0; i < spawnCount; i++)
+        {
+            randomPoints[i] = Random.insideUnitCircle;
+        }
+    }
+
     void OnGUI()
     {
         so.Update();
         EditorGUILayout.PropertyField(propRadius);
         EditorGUILayout.PropertyField(propSpawnCount);
+        EditorGUILayout.PropertyField(propSpawnPrefab);
+        propRadius.floatValue = Mathf.Max(1f, propRadius.floatValue);
+        propSpawnCount.intValue = Mathf.Max(1, propSpawnCount.intValue);
         if (so.ApplyModifiedProperties())
         {
+            GenerateRandomPoints();
             //repaints imediately after adjusting numbers
             SceneView.RepaintAll();
         }
 
+        
 
         GUILayout.BeginHorizontal();
 
@@ -63,8 +82,13 @@ public class testEditor : EditorWindow
 
 
         EditorGUILayout.BeginHorizontal();
-        gObject = EditorGUILayout.ObjectField(gObject, typeof(Object), true);
+       // spawnPrefab = EditorGUILayout.ObjectField(spawnPrefab, typeof(Object), true);
         EditorGUILayout.EndHorizontal();
+    }
+
+    void DrawSphere(Vector3 pos)
+    {
+        Handles.SphereHandleCap(-1, pos, Quaternion.identity, 0.1f, EventType.Repaint);
     }
 
     //while the scene is active
@@ -77,6 +101,10 @@ public class testEditor : EditorWindow
             sceneView.Repaint();
         }
 
+        if(Event.current.type == EventType.KeyDown && Event.current.keyCode == KeyCode.Space)
+        {
+
+        }
 
         bool altControl = (Event.current.modifiers & EventModifiers.Control) != 0;
         if (Event.current.type == EventType.ScrollWheel && altControl == true & single  != true)
@@ -97,22 +125,38 @@ public class testEditor : EditorWindow
         }
         //tracks mouse moment
         Ray ray = HandleUtility.GUIPointToWorldRay(Event.current.mousePosition);
+        Transform cameraTransform = sceneView.camera.transform;
 
         //raycast from the front of the camera
         //  Ray ray = new Ray(cTransform.position, cTransform.forward);
         // if hit
         if (Physics.Raycast(ray, out RaycastHit hit))
         {
-            if (single)
+            Vector3 hitNormal = hit.normal;
+            Vector3 hitTangent = Vector3.Cross(hitNormal, cameraTransform.up).normalized;
+            Vector3 hitBitangent = Vector3.Cross(hitNormal, hitTangent);
+
+            //draws points
+            foreach(Vector2 p in randomPoints)
             {
-                //draw a little line and a circle based around the hit point
-                Handles.DrawAAPolyLine(6, hit.point, hit.point + hit.normal);
+                Vector3 worldPosition = hit.point + (hitTangent * p.x + hitBitangent * p.y) * radius;
+                
+                if (single)
+                {
+                    //draw a little line and a circle based around the hit point
+                    Handles.DrawAAPolyLine(6, hit.point, hit.point + hit.normal);
+                    
+
+                }
+                else
+                {
+                    DrawSphere(worldPosition);
+                    //  Handles.DrawWireDisc(Vector3.zero, Vector3.up, radius);
+                    Handles.DrawWireDisc(hit.point, hit.normal, radius);
+                }
             }
-            else
-            {
-                //  Handles.DrawWireDisc(Vector3.zero, Vector3.up, radius);
-                Handles.DrawWireDisc(hit.point, hit.normal, radius);
-            }
+
+           
 
              
            
