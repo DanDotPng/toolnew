@@ -112,6 +112,8 @@ public class testEditor : EditorWindow
             sceneView.Repaint();
         }
 
+        //Handles.zTest = CompareFunction.LessEqual;
+
         bool altControl = (Event.current.modifiers & EventModifiers.Control) != 0;
 
         if (Event.current.type == EventType.KeyDown && Event.current.keyCode == KeyCode.Space && altControl == true)
@@ -145,19 +147,29 @@ public class testEditor : EditorWindow
             Vector3 hitTangent = Vector3.Cross(hitNormal, cameraTransform.up).normalized;
             Vector3 hitBitangent = Vector3.Cross(hitNormal, hitTangent);
 
+            List<RaycastHit> hitPts = new List<RaycastHit>();
+
             //draws points
             foreach(Vector2 p in randomPoints)
             {
-                Vector3 worldPosition = hit.point + (hitTangent * p.x + hitBitangent * p.y) * radius;
-                
+                Vector3 rayOrigin = hit.point + (hitTangent * p.x + hitBitangent * p.y) * radius;
+                Vector3 rayDirection = -hitNormal;
+                Ray ptRay = new Ray(rayOrigin, rayDirection);
+
                 if (single)
                 { 
                     Handles.DrawAAPolyLine(6, hit.point, hit.point + hit.normal);
                 }
                 else
                 {
-                    DrawSphere(worldPosition);                  
-                    Handles.DrawWireDisc(hit.point, hit.normal, radius);
+                    if(Physics.Raycast(ptRay, out RaycastHit ptHit))
+                    {
+                        DrawSphere(ptHit.point);
+                        Handles.DrawWireDisc(hit.point, hit.normal, radius);
+                        Handles.DrawAAPolyLine(ptHit.point, ptHit.point +ptHit.normal);
+                    }
+                                   
+                  //  Handles.DrawWireDisc(hit.point, hit.normal, radius);
                 }
             }
 
