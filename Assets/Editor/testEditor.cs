@@ -24,8 +24,8 @@ public class testEditor : EditorWindow
     SerializedProperty propSpawnCount;
     SerializedProperty propSpawnPrefab;
 
-    Vector2[] randomPoints;
-
+    Vector2[] randPoints;
+    List<RaycastHit> hitPts = new List<RaycastHit>();
     //disables GUI when not using the scene view. so like if you click out or something.
     void OnEnable()
     {
@@ -44,10 +44,10 @@ public class testEditor : EditorWindow
     
     void GenerateRandomPoints()
     {
-        randomPoints = new Vector2[spawnCount];
+        randPoints = new Vector2[spawnCount];
         for (int i = 0; i < spawnCount; i++)
         {
-            randomPoints[i] = Random.insideUnitCircle;
+            randPoints[i] = Random.insideUnitCircle;
         }
     }
 
@@ -61,13 +61,21 @@ public class testEditor : EditorWindow
 
         propRadius.floatValue = Mathf.Max(1f, propRadius.floatValue);
         propSpawnCount.intValue = Mathf.Max(1, propSpawnCount.intValue);
-
+        
         if (so.ApplyModifiedProperties())
         {
             GenerateRandomPoints();
             //repaints imediately after adjusting numbers
             SceneView.RepaintAll();
         }
+
+        //if click within the editor window, deselect whatever is selected
+        if (Event.current.type == EventType.MouseDown && Event.current.button == 0)
+        {
+            GUI.FocusControl(null);
+            Repaint();
+        }
+            
 
         GUILayout.BeginHorizontal();
 
@@ -94,9 +102,22 @@ public class testEditor : EditorWindow
         Handles.SphereHandleCap(-1, pos, Quaternion.identity, 0.1f, EventType.Repaint);
     }
 
+    
+    public enum Modifiers
+    {
+        Ctrl = 1,
+        Alt = 2,
+        Shift = 4,
+        ShiftRight = 8,
+        //16
+    }
+
     void TrySpawnPrefab()
     {
-        if(spawnPrefab == null)
+        if (spawnPrefab == null)
+            return;
+
+         foreach (RaycastHit hit in hitPts)
         {
 
         }
@@ -112,29 +133,28 @@ public class testEditor : EditorWindow
             sceneView.Repaint();
         }
 
+        //bool holdingAlt = (Event.current.modifiers & EventModifiers.Alt) != 0;
         //Handles.zTest = CompareFunction.LessEqual;
 
         bool altControl = (Event.current.modifiers & EventModifiers.Control) != 0;
 
-        if (Event.current.type == EventType.KeyDown && Event.current.keyCode == KeyCode.Space && altControl == true)
-        {
-            Debug.Log("lol");
-        }
+        //if current button is held is space + ctrl, uses event because we are using UI input
         
-      
         if (Event.current.type == EventType.ScrollWheel && altControl == true & single  != true)
         {
             float dir = Mathf.Sign(Event.current.delta.y);
 
             so.Update();
-            propRadius.floatValue += dir * 1f;
+            //lowers the radius, slows down the smaller the value
+            propRadius.floatValue *= 1f + dir * 0.05f;
             so.ApplyModifiedProperties();
-            Repaint();
+            Repaint(); //updates editor
 
             //Scroll, consume event, no longer mouse wheel just change radius.
             Event.current.Use();
         }
-        //tracks mouse moment
+        
+        //tracks mouse movement
         Ray ray = HandleUtility.GUIPointToWorldRay(Event.current.mousePosition);
         Transform cameraTransform = sceneView.camera.transform;
 
@@ -143,34 +163,68 @@ public class testEditor : EditorWindow
         // if hit
         if (Physics.Raycast(ray, out RaycastHit hit))
         {
+            //sets up tangent space
             Vector3 hitNormal = hit.normal;
             Vector3 hitTangent = Vector3.Cross(hitNormal, cameraTransform.up).normalized;
             Vector3 hitBitangent = Vector3.Cross(hitNormal, hitTangent);
 
-            List<RaycastHit> hitPts = new List<RaycastHit>();
-
-            //draws points
-            foreach(Vector2 p in randomPoints)
+            Ray GetTangentRay(Vector2 tangentSpacePos)
             {
-                Vector3 rayOrigin = hit.point + (hitTangent * p.x + hitBitangent * p.y) * radius;
+                Vector3 rayOrigin = hit.point + (hitTangent * tangentSpacePos.x + hitBitangent * tangentSpacePos.y) * radius;
+                //offset
+                rayOrigin += hitNormal * 2;
                 Vector3 rayDirection = -hitNormal;
-                Ray ptRay = new Ray(rayOrigin, rayDirection);
+                return new Ray(rayOrigin, rayDirection);
+            }
 
-                if (single)
-                { 
-                    Handles.DrawAAPolyLine(6, hit.point, hit.point + hit.normal);
+              
+
+            //gets all the rays around the perimeter, joins the lines 
+            const int circleDetail = 128;
+            Vector3[] ringPoints = new Vector3 [circleDetail];
+            for (int i = 0; i < circleDetail; i++)
+            {
+               float t = i /( (float)circleDetail -1);
+                const float TAU = 6.28318530718f;
+                float angRad = t * TAU;
+                Vector2 dir = new Vector2(Mathf.Cos(angRad), Mathf.Sin(angRad));
+                Ray r = GetTangentRay(dir);
+                if (Physics.Raycast(r, out RaycastHit cHit))
+                {
+                    ringPoints[i] = cHit.point + cHit.normal * 0.02f;
                 }
                 else
+                    ringPoints[i] = r.origin;
+            }
+
+            //draws points
+            foreach (Vector2 p in randPoints)
+            {
+                Ray ptRay = GetTangentRay(p);
+
+
+                if (Physics.Raycast(ptRay, out RaycastHit ptHit))
                 {
-                    if(Physics.Raycast(ptRay, out RaycastHit ptHit))
+                    hitPts.Add(ptHit);
+                    if (single)
+                    {
+                        Handles.DrawAAPolyLine(3, hit.point, hit.point + hit.normal);
+                        DrawSphere(hit.point);
+                    }
+                    else
                     {
                         DrawSphere(ptHit.point);
-                        Handles.DrawWireDisc(hit.point, hit.normal, radius);
-                        Handles.DrawAAPolyLine(ptHit.point, ptHit.point +ptHit.normal);
+                        //  Handles.DrawWireDisc(hit.point, hit.normal, radius);
+                        Handles.DrawAAPolyLine(ringPoints);
+                        Handles.DrawAAPolyLine(ptHit.point, ptHit.point + ptHit.normal);
                     }
-                                   
-                  //  Handles.DrawWireDisc(hit.point, hit.normal, radius);
                 }
+            }
+
+
+            if (Event.current.type == EventType.KeyDown && Event.current.keyCode == KeyCode.Space && altControl == true)
+            {
+                TrySpawnPrefab();
             }
 
         }
