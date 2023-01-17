@@ -77,23 +77,31 @@ public class testEditor : EditorWindow
             
 
         GUILayout.BeginHorizontal();
+        
+        Color original = GUI.backgroundColor;
 
-        if (GUILayout.Toggle(random, "Random"))
+        if (random)
+            GUI.backgroundColor = Color.black;
+
+        if (GUILayout.Button("Random"))
         {
             single = false;
             random = true;
         }
-        if (GUILayout.Toggle(single, "Single"))
+
+        GUI.backgroundColor = original;
+
+        if (single)
+            GUI.backgroundColor = Color.black;
+
+        if (GUILayout.Button("Single"))
         {
             single = true;
             random = false;
         }
-
-        GUILayout.EndHorizontal(); 
-
-        EditorGUILayout.BeginHorizontal();
-       // spawnPrefab = EditorGUILayout.ObjectField(spawnPrefab, typeof(Object), true);
-        EditorGUILayout.EndHorizontal();
+        GUI.backgroundColor = original;
+        GUILayout.EndHorizontal();
+      
     }
 
     void DrawSphere(Vector3 pos)
@@ -111,7 +119,7 @@ public class testEditor : EditorWindow
         foreach (RaycastHit hit in hitPts)
         {
             GameObject spawnedThing = (GameObject)PrefabUtility.InstantiatePrefab(spawnPrefab);
-            Debug.Log(spawnedThing);
+          
             spawnedThing.transform.position = hit.point;
             spawnedThing.transform.rotation = Quaternion.LookRotation(hit.normal);
         }
@@ -157,11 +165,7 @@ public class testEditor : EditorWindow
         //  Ray ray = new Ray(cTransform.position, cTransform.forward);
         // if hit
         if (Physics.Raycast(ray, out RaycastHit hit))
-        {
-            const int circleDetail = 128;
-            Vector3[] ringPoints = new Vector3[circleDetail];
-
-            //sets up tangent space
+        {  //sets up tangent space
             Vector3 hitNormal = hit.normal;
             Vector3 hitTangent = Vector3.Cross(hitNormal, cTransform.up).normalized;
             Vector3 hitBitangent = Vector3.Cross(hitNormal, hitTangent);
@@ -174,31 +178,13 @@ public class testEditor : EditorWindow
                 Vector3 rayDirection = -hitNormal;
                 return new Ray(rayOrigin, rayDirection);
             }
-            List<RaycastHit> hitPts = new List<RaycastHit>();
-            foreach (Vector2 p in randPoints)
-            {
-                Ray ptRay = GetTangentRay(p);
-
-
-                if (Physics.Raycast(ptRay, out RaycastHit ptHit))
-                {
-                   
-                    hitPts.Add(ptHit);
-                    DrawSphere(ptHit.point);
-                    Handles.DrawAAPolyLine(3, hit.point, hit.point + hit.normal);
-                     
-                }
-            }
-            if (Event.current.type == EventType.KeyDown && Event.current.keyCode == KeyCode.Space)
-            {
-                TrySpawnPrefab(hitPts);
-            }
-
-            //gets all the rays around the perimeter, joins the lines 
+            const int circleDetail = 128;
+            Vector3[] ringPoints = new Vector3[circleDetail];
 
             for (int i = 0; i < circleDetail; i++)
             {
-               float t = i /( (float)circleDetail - 1);
+                 
+                float t = i / ((float)circleDetail - 1);
                 const float TAU = 6.28318530718f;
                 float angRad = t * TAU;
                 Vector2 dir = new Vector2(Mathf.Cos(angRad), Mathf.Sin(angRad));
@@ -211,13 +197,49 @@ public class testEditor : EditorWindow
                 {
                     ringPoints[i] = r.origin;
                 }
+
+            }
+           
+            List<RaycastHit> hitPts = new List<RaycastHit>();
+            foreach (Vector2 p in randPoints)
+            {
+                Ray ptRay = GetTangentRay(p);
+
+                if (Physics.Raycast(ptRay, out RaycastHit ptHit))
+                {
+                    
+                    if (single)
+                    {
+                        hitPts.Add(ptHit);
+                        DrawSphere(hit.point);
+                        Handles.DrawAAPolyLine(3, hit.point, hit.point + hit.normal);
+                    }
+                    else
+                    {
+                        hitPts.Add(ptHit);
+                        DrawSphere(ptHit.point);
+                        Handles.DrawAAPolyLine(3, hit.point, hit.point + hit.normal);
                      
+                        Handles.DrawAAPolyLine(ringPoints);
+                    }
+                }
+            }
+            if (Event.current.type == EventType.KeyDown && Event.current.keyCode == KeyCode.Space && altControl == true)
+            {
+                if (single)
+                {
+                    GameObject spawnedThing = (GameObject)PrefabUtility.InstantiatePrefab(spawnPrefab);
+
+                    spawnedThing.transform.position = hit.point;
+                    spawnedThing.transform.rotation = Quaternion.LookRotation(hit.normal);
+                }
+
+                else
+                    TrySpawnPrefab(hitPts);
+
             }
 
-
-            Handles.DrawAAPolyLine(ringPoints);
-
-
+            //gets all the rays around the perimeter, joins the lines 
 
         }
     }
