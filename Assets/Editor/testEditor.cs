@@ -119,7 +119,7 @@ public class testEditor : EditorWindow
         foreach (RaycastHit hit in hitPts)
         {
             GameObject spawnedThing = (GameObject)PrefabUtility.InstantiatePrefab(spawnPrefab);
-          
+            Undo.RegisterCreatedObjectUndo(spawnedThing, "Spawn Objects");
             spawnedThing.transform.position = hit.point;
             spawnedThing.transform.rotation = Quaternion.LookRotation(hit.normal);
         }
