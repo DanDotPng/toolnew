@@ -16,24 +16,25 @@ public class testEditor : EditorWindow
     bool random = true;
     bool single;
 
+    public Material previewMat;
     public GameObject spawnPrefab = null;
 
     SerializedObject so;
     SerializedProperty propRadius;
     SerializedProperty propSpawnCount;
     SerializedProperty propSpawnPrefab;
-
+    SerializedProperty propPreviewMat;
     Vector2[] randPoints;
      
     //disables GUI when not using the scene view. so like if you click out or something.
     void OnEnable()
-    {
-        //copied, research later
+    { 
         so = new SerializedObject(this);
 
         propRadius = so.FindProperty("radius");
         propSpawnCount = so.FindProperty("spawnCount");
         propSpawnPrefab = so.FindProperty("spawnPrefab");
+        propPreviewMat = so.FindProperty("previewMat");
 
         GenerateRandomPoints();
         SceneView.duringSceneGui += DuringSceneGUI;
@@ -59,8 +60,8 @@ public class testEditor : EditorWindow
         EditorGUILayout.PropertyField(propSpawnCount);
         propSpawnCount.intValue = Mathf.Max(1, propSpawnCount.intValue);
         EditorGUILayout.PropertyField(propSpawnPrefab);
-         
-       
+        EditorGUILayout.PropertyField(propPreviewMat);
+
         if (so.ApplyModifiedProperties())
         {
             GenerateRandomPoints();
@@ -80,6 +81,8 @@ public class testEditor : EditorWindow
         
         Color original = GUI.backgroundColor;
 
+
+        //buttons, changes colour based on previously selected, changes boolean
         if (random)
             GUI.backgroundColor = Color.black;
 
@@ -104,31 +107,31 @@ public class testEditor : EditorWindow
       
     }
 
+    //this function draws spheres around raycasted points fed into it
     void DrawSphere(Vector3 pos)
     {
         Handles.SphereHandleCap(-1, pos, Quaternion.identity, 0.1f, EventType.Repaint);
     }
 
   
-
-    void TrySpawnPrefab(List<RaycastHit> hitPts)
+    //spawns prefabs at the raycast points
+    void TrySpawnPrefab(List<Pose> poses)
     {
         if (spawnPrefab == null)
             return;
 
-
-        foreach (RaycastHit hit in hitPts)
+        // for every raycast hit, this is calculated
+        foreach (Pose pose in poses)
         {
             GameObject spawnedThing = (GameObject)PrefabUtility.InstantiatePrefab(spawnPrefab);
+            //adds spawned objects to list so the user can undo
             Undo.RegisterCreatedObjectUndo(spawnedThing, "Spawn Objects");
-            spawnedThing.transform.position = hit.point;
-
-            float randAngleDeg = Random.value * 360;
-            Quaternion randRot = Quaternion.Euler(0f, 0f, randAngleDeg);
-
-            Quaternion rot =   Quaternion.LookRotation(hit.normal) * (randRot * Quaternion.Euler(90f, 0f, 0f));
-            spawnedThing.transform.rotation = rot;
+            spawnedThing.transform.position = pose.position;
+            spawnedThing.transform.rotation = pose.rotation;
+            
         }
+        //generates different random points after each spawn
+        GenerateRandomPoints();
     }
 
     //while the scene is active
@@ -206,7 +209,7 @@ public class testEditor : EditorWindow
 
             }
            
-            List<RaycastHit> hitPts = new List<RaycastHit>();
+            List<Pose> hitPoses = new List<Pose>();
             foreach (Vector2 p in randPoints)
             {
                 Ray ptRay = GetTangentRay(p);
@@ -216,17 +219,45 @@ public class testEditor : EditorWindow
                     
                     if (single)
                     {
-                        hitPts.Add(ptHit);
+                       // hitPoses.Add(pose);
                         DrawSphere(hit.point);
                         Handles.DrawAAPolyLine(3, hit.point, hit.point + hit.normal);
                     }
                     else
                     {
-                        hitPts.Add(ptHit);
+                        //random rotation
+                        float randAngleDeg = Random.value * 360;
+                        Quaternion randRot = Quaternion.Euler(0f, 0f, randAngleDeg);
+                        Quaternion rot = Quaternion.LookRotation(ptHit.normal) * (randRot * Quaternion.Euler(90f, 0f, 0f));
+                        Pose pose = new Pose(ptHit.point, rot);
+                        hitPoses.Add(pose);
+
                         DrawSphere(ptHit.point);
-                        Handles.DrawAAPolyLine(3, hit.point, hit.point + hit.normal);
-                     
+                        Handles.DrawAAPolyLine(3, hit.point, hit.point + hit.normal);                     
                         Handles.DrawAAPolyLine(ringPoints);
+
+                        //mesh preview
+                        Matrix4x4 poseMtx = Matrix4x4.TRS(pose.position, pose.rotation, Vector3.one);
+                        MeshFilter[] filters = spawnPrefab.GetComponentsInChildren<MeshFilter>();
+
+                        foreach (MeshFilter filter in filters)
+                        {
+                            Matrix4x4 childToPose = filter.transform.localToWorldMatrix;
+                            Matrix4x4 childWorldMatrix = poseMtx * childToPose;
+
+                            Mesh mesh = filter.sharedMesh;
+                            Material mat = filter.GetComponent<MeshRenderer>().sharedMaterial;
+                            mat.SetPass(0);
+                            Graphics.DrawMeshNow(mesh, childWorldMatrix);
+                        }
+                         
+
+                        /*
+                        Mesh mesh = spawnPrefab.GetComponent<MeshFilter>().sharedMesh;
+                        Material mat = spawnPrefab.GetComponent<MeshRenderer>().sharedMaterial;
+                        mat.SetPass(0);
+                        Graphics.DrawMeshNow(mesh, pose.position, pose.rotation);
+                        */
                     }
                 }
             }
@@ -246,7 +277,7 @@ public class testEditor : EditorWindow
                 }
 
                 else
-                    TrySpawnPrefab(hitPts);
+                    TrySpawnPrefab(hitPoses);
 
             }
 
