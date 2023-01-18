@@ -24,7 +24,20 @@ public class testEditor : EditorWindow
     SerializedProperty propSpawnCount;
     SerializedProperty propSpawnPrefab;
     SerializedProperty propPreviewMat;
-    Vector2[] randPoints;
+
+    public struct RandomData
+    {
+        public Vector2 pointInDisc;
+        public float randomAngleDeg;
+
+        public void SetRandomValues()
+        {
+            pointInDisc = Random.insideUnitCircle;
+            randomAngleDeg = Random.value * 360;
+        }
+    }
+
+    RandomData[] randPoints;
      
     //disables GUI when not using the scene view. so like if you click out or something.
     void OnEnable()
@@ -44,11 +57,11 @@ public class testEditor : EditorWindow
     
     void GenerateRandomPoints()
     {
-        randPoints = new Vector2[spawnCount];
+        randPoints = new RandomData[spawnCount];
         
         for (int i = 0; i < spawnCount; i++)
         {
-            randPoints[i] = Random.insideUnitCircle;
+            randPoints[i].SetRandomValues();
         }
     }
 
@@ -179,14 +192,7 @@ public class testEditor : EditorWindow
             Vector3 hitTangent = Vector3.Cross(hitNormal, cTransform.up).normalized;
             Vector3 hitBitangent = Vector3.Cross(hitNormal, hitTangent);
 
-            Ray GetTangentRay(Vector2 tangentSpacePos)
-            {
-                Vector3 rayOrigin = hit.point + (hitTangent * tangentSpacePos.x + hitBitangent * tangentSpacePos.y) * radius;
-                //offset
-                rayOrigin += hitNormal * 2;
-                Vector3 rayDirection = -hitNormal;
-                return new Ray(rayOrigin, rayDirection);
-            }
+          
             const int circleDetail = 128;
             Vector3[] ringPoints = new Vector3[circleDetail];
 
@@ -208,11 +214,19 @@ public class testEditor : EditorWindow
                 }
 
             }
-           
-            List<Pose> hitPoses = new List<Pose>();
-            foreach (Vector2 p in randPoints)
+            Ray GetTangentRay(Vector2 tangentSpacePos)
             {
-                Ray ptRay = GetTangentRay(p);
+                Vector3 rayOrigin = hit.point + (hitTangent * tangentSpacePos.x + hitBitangent * tangentSpacePos.y) * radius;
+                //offset
+                rayOrigin += hitNormal * 2;
+                Vector3 rayDirection = -hitNormal;
+                return new Ray(rayOrigin, rayDirection);
+            }
+
+            List<Pose> hitPoses = new List<Pose>();
+            foreach (RandomData rndDataPoint in randPoints)
+            {
+                Ray ptRay = GetTangentRay(rndDataPoint.pointInDisc);
 
                 if (Physics.Raycast(ptRay, out RaycastHit ptHit))
                 {
@@ -226,38 +240,44 @@ public class testEditor : EditorWindow
                     else
                     {
                         //random rotation
-                        float randAngleDeg = Random.value * 360;
-                        Quaternion randRot = Quaternion.Euler(0f, 0f, randAngleDeg);
+                       // float randAngleDeg = Random.value * 360;
+                        Quaternion randRot = Quaternion.Euler(0f, 0f, rndDataPoint.randomAngleDeg);
                         Quaternion rot = Quaternion.LookRotation(ptHit.normal) * (randRot * Quaternion.Euler(90f, 0f, 0f));
                         Pose pose = new Pose(ptHit.point, rot);
                         hitPoses.Add(pose);
 
                         DrawSphere(ptHit.point);
-                        Handles.DrawAAPolyLine(3, hit.point, hit.point + hit.normal);                     
+                        //Handles.DrawAAPolyLine(3, hit.point, hit.point + hit.normal);                     
                         Handles.DrawAAPolyLine(ringPoints);
 
-                        //mesh preview
-                        Matrix4x4 poseMtx = Matrix4x4.TRS(pose.position, pose.rotation, Vector3.one);
-                        MeshFilter[] filters = spawnPrefab.GetComponentsInChildren<MeshFilter>();
 
-                        foreach (MeshFilter filter in filters)
+                        if(spawnPrefab != null)
                         {
-                            Matrix4x4 childToPose = filter.transform.localToWorldMatrix;
-                            Matrix4x4 childWorldMatrix = poseMtx * childToPose;
+                            //mesh preview
+                            Matrix4x4 poseToWorld = Matrix4x4.TRS(pose.position, pose.rotation, Vector3.one);
+                            MeshFilter[] filters = spawnPrefab.GetComponentsInChildren<MeshFilter>();
 
-                            Mesh mesh = filter.sharedMesh;
-                            Material mat = filter.GetComponent<MeshRenderer>().sharedMaterial;
+                            foreach (MeshFilter filter in filters)
+                            {
+                                Matrix4x4 childToPose = filter.transform.localToWorldMatrix;
+                                Matrix4x4 childWorldMatrix = poseToWorld * childToPose;
+
+                                Mesh mesh = filter.sharedMesh;
+                                Material mat = filter.GetComponent<MeshRenderer>().sharedMaterial;
+                                mat.SetPass(0);
+                                Graphics.DrawMeshNow(mesh, childWorldMatrix);
+                            }
+
+
+                            /*
+                            Mesh mesh = spawnPrefab.GetComponent<MeshFilter>().sharedMesh;
+                            Material mat = spawnPrefab.GetComponent<MeshRenderer>().sharedMaterial;
                             mat.SetPass(0);
-                            Graphics.DrawMeshNow(mesh, childWorldMatrix);
+                            Graphics.DrawMeshNow(mesh, pose.position, pose.rotation);
+                            */
                         }
-                         
 
-                        /*
-                        Mesh mesh = spawnPrefab.GetComponent<MeshFilter>().sharedMesh;
-                        Material mat = spawnPrefab.GetComponent<MeshRenderer>().sharedMaterial;
-                        mat.SetPass(0);
-                        Graphics.DrawMeshNow(mesh, pose.position, pose.rotation);
-                        */
+
                     }
                 }
             }
