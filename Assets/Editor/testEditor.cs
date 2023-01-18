@@ -116,12 +116,18 @@ public class testEditor : EditorWindow
         if (spawnPrefab == null)
             return;
 
+
         foreach (RaycastHit hit in hitPts)
         {
             GameObject spawnedThing = (GameObject)PrefabUtility.InstantiatePrefab(spawnPrefab);
             Undo.RegisterCreatedObjectUndo(spawnedThing, "Spawn Objects");
             spawnedThing.transform.position = hit.point;
-            spawnedThing.transform.rotation = Quaternion.LookRotation(hit.normal);
+
+            float randAngleDeg = Random.value * 360;
+            Quaternion randRot = Quaternion.Euler(0f, 0f, randAngleDeg);
+
+            Quaternion rot =   Quaternion.LookRotation(hit.normal) * (randRot * Quaternion.Euler(90f, 0f, 0f));
+            spawnedThing.transform.rotation = rot;
         }
     }
 
@@ -229,9 +235,14 @@ public class testEditor : EditorWindow
                 if (single)
                 {
                     GameObject spawnedThing = (GameObject)PrefabUtility.InstantiatePrefab(spawnPrefab);
-
+                    Undo.RegisterCreatedObjectUndo(spawnedThing, "Spawn Objects");
                     spawnedThing.transform.position = hit.point;
-                    spawnedThing.transform.rotation = Quaternion.LookRotation(hit.normal);
+
+                    float randAngleDeg = Random.value * 360;
+                    Quaternion randRot = Quaternion.Euler(0f, 0f, randAngleDeg);
+
+                    Quaternion rot = Quaternion.LookRotation(hit.normal) * (randRot * Quaternion.Euler(90f, 0f, 0f));
+                    spawnedThing.transform.rotation = rot;
                 }
 
                 else
