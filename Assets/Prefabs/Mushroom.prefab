@@ -10,7 +10,7 @@ GameObject:
   m_Component:
   - component: {fileID: 5577010018513186939}
   m_Layer: 0
-  m_Name: Test
+  m_Name: Mushroom
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -62,7 +62,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 3357984522887286528, guid: c236b667eb8ecf945aba5718cc4189fb, type: 3}
       propertyPath: m_LocalPosition.y
-      value: 1.452
+      value: 2.6360002
       objectReference: {fileID: 0}
     - target: {fileID: 3357984522887286528, guid: c236b667eb8ecf945aba5718cc4189fb, type: 3}
       propertyPath: m_LocalPosition.z
@@ -132,7 +132,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 3357984522887286528, guid: c236b667eb8ecf945aba5718cc4189fb, type: 3}
       propertyPath: m_LocalPosition.y
-      value: -0.113
+      value: 1.071
       objectReference: {fileID: 0}
     - target: {fileID: 3357984522887286528, guid: c236b667eb8ecf945aba5718cc4189fb, type: 3}
       propertyPath: m_LocalPosition.z

@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEditor;
+using System.Linq;
 
 public class testEditor : EditorWindow
 {
@@ -38,7 +39,9 @@ public class testEditor : EditorWindow
     }
 
     RandomData[] randPoints;
-     
+
+    GameObject[] prefabs;
+
     //disables GUI when not using the scene view. so like if you click out or something.
     void OnEnable()
     { 
@@ -51,6 +54,11 @@ public class testEditor : EditorWindow
 
         GenerateRandomPoints();
         SceneView.duringSceneGui += DuringSceneGUI;
+
+        string[] guids = AssetDatabase.FindAssets("t:prefab", new[] { "Assets/Prefabs" });
+        IEnumerable<string> paths = guids.Select(AssetDatabase.GUIDToAssetPath);
+        prefabs = paths.Select( AssetDatabase.LoadAssetAtPath<GameObject>).ToArray();
+ 
     }
 
     void OnDisable() => SceneView.duringSceneGui -= DuringSceneGUI;
@@ -150,6 +158,21 @@ public class testEditor : EditorWindow
     //while the scene is active
     void DuringSceneGUI(SceneView sceneView)
     {
+         
+        Handles.BeginGUI();
+        Rect rect = new Rect(8, 8, 200, 20);
+
+        foreach (GameObject prefab in prefabs)
+        {
+           if( GUI.Button(rect, prefab.name))
+            {
+                spawnPrefab = prefab;
+            }
+            rect.y += rect.height + 2;
+        }
+        Handles.EndGUI();
+
+
         Transform cTransform = sceneView.camera.transform;
         //repaints when mouse moves
         if(Event.current.type == EventType.MouseMove)
