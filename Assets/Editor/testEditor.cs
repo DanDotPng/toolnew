@@ -160,11 +160,13 @@ public class testEditor : EditorWindow
     {
          
         Handles.BeginGUI();
-        Rect rect = new Rect(8, 8, 200, 20);
+        Rect rect = new Rect(8, 8, 64, 64);
 
         foreach (GameObject prefab in prefabs)
         {
-           if( GUI.Button(rect, prefab.name))
+            Texture icon = AssetPreview.GetAssetPreview(prefab);
+
+           if( GUI.Button(rect, new GUIContent(icon)))
             {
                 spawnPrefab = prefab;
             }
