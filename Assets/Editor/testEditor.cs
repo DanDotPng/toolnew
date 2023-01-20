@@ -18,13 +18,15 @@ public class testEditor : EditorWindow
     bool single;
 
     public Material previewMat;
-    public GameObject spawnPrefab = null;
+    List<GameObject> spawnPrefabs = new List<GameObject>();
 
     SerializedObject so;
     SerializedProperty propRadius;
     SerializedProperty propSpawnCount;
     SerializedProperty propSpawnPrefab;
     SerializedProperty propPreviewMat;
+  public  MeshFilter[] filters;
+  [SerializeField] bool[] selectedPrefabState;
 
     public struct RandomData
     {
@@ -49,7 +51,7 @@ public class testEditor : EditorWindow
 
         propRadius = so.FindProperty("radius");
         propSpawnCount = so.FindProperty("spawnCount");
-        propSpawnPrefab = so.FindProperty("spawnPrefab");
+       // propSpawnPrefab = so.FindProperty("spawnPrefab");
         propPreviewMat = so.FindProperty("previewMat");
 
         GenerateRandomPoints();
@@ -58,6 +60,10 @@ public class testEditor : EditorWindow
         string[] guids = AssetDatabase.FindAssets("t:prefab", new[] { "Assets/Prefabs" });
         IEnumerable<string> paths = guids.Select(AssetDatabase.GUIDToAssetPath);
         prefabs = paths.Select( AssetDatabase.LoadAssetAtPath<GameObject>).ToArray();
+        if(selectedPrefabState == null || selectedPrefabState.Length != prefabs.Length)
+        {
+            selectedPrefabState = new bool[prefabs.Length];
+        }
  
     }
 
@@ -80,7 +86,7 @@ public class testEditor : EditorWindow
         propRadius.floatValue = Mathf.Max(1f, propRadius.floatValue);
         EditorGUILayout.PropertyField(propSpawnCount);
         propSpawnCount.intValue = Mathf.Max(1, propSpawnCount.intValue);
-        EditorGUILayout.PropertyField(propSpawnPrefab);
+      //  EditorGUILayout.PropertyField(propSpawnPrefab);
         EditorGUILayout.PropertyField(propPreviewMat);
 
         if (so.ApplyModifiedProperties())
@@ -138,13 +144,13 @@ public class testEditor : EditorWindow
     //spawns prefabs at the raycast points
     void TrySpawnPrefab(List<Pose> poses)
     {
-        if (spawnPrefab == null)
+        if (spawnPrefabs.Count == 0)
             return;
 
         // for every raycast hit, this is calculated
         foreach (Pose pose in poses)
         {
-            GameObject spawnedThing = (GameObject)PrefabUtility.InstantiatePrefab(spawnPrefab);
+            GameObject spawnedThing = (GameObject)PrefabUtility.InstantiatePrefab(spawnPrefabs[0]);
             //adds spawned objects to list so the user can undo
             Undo.RegisterCreatedObjectUndo(spawnedThing, "Spawn Objects");
             spawnedThing.transform.position = pose.position;
@@ -153,7 +159,9 @@ public class testEditor : EditorWindow
         }
         //generates different random points after each spawn
         GenerateRandomPoints();
-    }
+    } 
+
+
 
     //while the scene is active
     void DuringSceneGUI(SceneView sceneView)
@@ -162,15 +170,27 @@ public class testEditor : EditorWindow
         Handles.BeginGUI();
         Rect rect = new Rect(8, 8, 64, 64);
 
-        foreach (GameObject prefab in prefabs)
+        for(int i = 0; i <prefabs.Length; i++)
         {
+            GameObject prefab = prefabs[i];
             Texture icon = AssetPreview.GetAssetPreview(prefab);
-
-           if( GUI.Button(rect, new GUIContent(icon)))
+            EditorGUI.BeginChangeCheck();
+            selectedPrefabState[i] = (GUI.Toggle(rect, selectedPrefabState[i], new GUIContent(icon)));
+            if (EditorGUI.EndChangeCheck())
             {
-                spawnPrefab = prefab;
+
+                //updates selected prefab list
+                spawnPrefabs.Clear();
+                for (int j = 0; j < prefabs.Length; j++)
+                {
+                    if (selectedPrefabState[j] == true)
+                        spawnPrefabs.Add(prefabs[j]);
+
+                }
             }
-            rect.y += rect.height + 2;
+         //  spawnPrefab = prefab;
+           
+           rect.y += rect.height + 2;
         }
         Handles.EndGUI();
 
@@ -276,11 +296,17 @@ public class testEditor : EditorWindow
                         Handles.DrawAAPolyLine(ringPoints);
 
 
-                        if(spawnPrefab != null)
+                        if(spawnPrefabs != null && spawnPrefabs.Count > 0)
                         {
                             //mesh preview
                             Matrix4x4 poseToWorld = Matrix4x4.TRS(pose.position, pose.rotation, Vector3.one);
-                            MeshFilter[] filters = spawnPrefab.GetComponentsInChildren<MeshFilter>();
+
+                              
+                            for (int i = 0; i < spawnPrefabs.Count; i++)
+                            {
+                                filters = spawnPrefabs[i].GetComponentsInChildren<MeshFilter>();
+                            }
+                           
 
                             foreach (MeshFilter filter in filters)
                             {
@@ -310,7 +336,7 @@ public class testEditor : EditorWindow
             {
                 if (single)
                 {
-                    GameObject spawnedThing = (GameObject)PrefabUtility.InstantiatePrefab(spawnPrefab);
+                    GameObject spawnedThing = (GameObject)PrefabUtility.InstantiatePrefab(spawnPrefabs[0]);
                     Undo.RegisterCreatedObjectUndo(spawnedThing, "Spawn Objects");
                     spawnedThing.transform.position = hit.point;
 
