@@ -4,6 +4,38 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEditor;
 using System.Linq;
+using UnityEngine.Rendering;
+using Random = UnityEngine.Random;
+
+public struct RandomData
+{
+    public Vector2 pointInDisc;
+    public float randAngleDeg;
+    public GameObject spawnPrefab;
+    public void SetRandomValues(List<GameObject> prefabs)
+    {
+        pointInDisc = Random.insideUnitCircle;
+        randAngleDeg = Random.value * 360;        
+        spawnPrefab = prefabs[Random.Range(0, prefabs.Count)];
+    }
+}
+
+public struct SpawnPoint
+{
+    public RandomData spawnData;
+    public Vector3 position;
+    public Quaternion rotation;
+
+    public Vector3 up => rotation* Vector3.up;
+
+   public SpawnPoint( Vector3 position, Quaternion rotation, RandomData spawnData )
+    {
+        this.spawnData = spawnData;
+        this.position = position;
+        this.rotation = rotation;
+    }
+}
+ 
 
 public class testEditor : EditorWindow
 {
@@ -28,17 +60,7 @@ public class testEditor : EditorWindow
   public  MeshFilter[] filters;
   [SerializeField] bool[] selectedPrefabState;
 
-    public struct RandomData
-    {
-        public Vector2 pointInDisc;
-        public float randomAngleDeg;
-
-        public void SetRandomValues()
-        {
-            pointInDisc = Random.insideUnitCircle;
-            randomAngleDeg = Random.value * 360;
-        }
-    }
+  
 
     RandomData[] randPoints;
 
@@ -75,7 +97,7 @@ public class testEditor : EditorWindow
         
         for (int i = 0; i < spawnCount; i++)
         {
-            randPoints[i].SetRandomValues();
+            randPoints[i].SetRandomValues(spawnPrefabs);
         }
     }
 
@@ -142,19 +164,20 @@ public class testEditor : EditorWindow
 
   
     //spawns prefabs at the raycast points
-    void TrySpawnPrefab(List<Pose> poses)
+    void TrySpawnPrefab(List<SpawnPoint> spawnPoints)
     {
         if (spawnPrefabs.Count == 0)
             return;
+        
 
         // for every raycast hit, this is calculated
-        foreach (Pose pose in poses)
+        foreach (SpawnPoint spawnPoint in spawnPoints)
         {
             GameObject spawnedThing = (GameObject)PrefabUtility.InstantiatePrefab(spawnPrefabs[0]);
             //adds spawned objects to list so the user can undo
             Undo.RegisterCreatedObjectUndo(spawnedThing, "Spawn Objects");
-            spawnedThing.transform.position = pose.position;
-            spawnedThing.transform.rotation = pose.rotation;
+            spawnedThing.transform.position = spawnPoint.position;
+            spawnedThing.transform.rotation = spawnPoint.rotation;
             
         }
         //generates different random points after each spawn
@@ -268,7 +291,7 @@ public class testEditor : EditorWindow
                 return new Ray(rayOrigin, rayDirection);
             }
 
-            List<Pose> hitPoses = new List<Pose>();
+            List<SpawnPoint> spawnPoints = new List<SpawnPoint>();
             foreach (RandomData rndDataPoint in randPoints)
             {
                 Ray ptRay = GetTangentRay(rndDataPoint.pointInDisc);
@@ -278,7 +301,7 @@ public class testEditor : EditorWindow
                     
                     if (single)
                     {
-                       // hitPoses.Add(pose);
+                       // spawnPoints.Add(pose);
                         DrawSphere(hit.point);
                         Handles.DrawAAPolyLine(3, hit.point, hit.point + hit.normal);
                     }
@@ -286,10 +309,10 @@ public class testEditor : EditorWindow
                     {
                         //random rotation
                        // float randAngleDeg = Random.value * 360;
-                        Quaternion randRot = Quaternion.Euler(0f, 0f, rndDataPoint.randomAngleDeg);
+                        Quaternion randRot = Quaternion.Euler(0f, 0f, rndDataPoint.randAngleDeg);
                         Quaternion rot = Quaternion.LookRotation(ptHit.normal) * (randRot * Quaternion.Euler(90f, 0f, 0f));
-                        Pose pose = new Pose(ptHit.point, rot);
-                        hitPoses.Add(pose);
+                        SpawnPoint spawnPoint = new SpawnPoint(ptHit.point, rot, rndDataPoint);
+                        spawnPoints.Add(spawnPoint);
 
                         DrawSphere(ptHit.point);
                         //Handles.DrawAAPolyLine(3, hit.point, hit.point + hit.normal);                     
@@ -299,7 +322,7 @@ public class testEditor : EditorWindow
                         if(spawnPrefabs != null && spawnPrefabs.Count > 0)
                         {
                             //mesh preview
-                            Matrix4x4 poseToWorld = Matrix4x4.TRS(pose.position, pose.rotation, Vector3.one);
+                            Matrix4x4 poseToWorld = Matrix4x4.TRS(spawnPoint.position, spawnPoint.rotation, Vector3.one);
 
                               
                             for (int i = 0; i < spawnPrefabs.Count; i++)
@@ -348,7 +371,7 @@ public class testEditor : EditorWindow
                 }
 
                 else
-                    TrySpawnPrefab(hitPoses);
+                    TrySpawnPrefab(spawnPoints);
 
             }
 
