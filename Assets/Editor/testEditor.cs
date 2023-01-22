@@ -8,11 +8,26 @@ public struct RandomData
 {
     public Vector2 pointInDisc;
     public float randomAngleDeg;
-
-    public void SetRandomValues()
+    public GameObject spawnPrefab;
+    public void SetRandomValues(List<GameObject> prefabs)
     {
         pointInDisc = Random.insideUnitCircle;
         randomAngleDeg = Random.value * 360;
+        spawnPrefab = prefabs[Random.Range(0, prefabs.Count)];
+    }
+}
+
+public struct SpawnPoint
+{
+    public RandomData spawnData;
+    public Vector3 position;
+    public Quaternion rotation;
+    public Vector3 up => rotation * up;
+    public SpawnPoint(Vector3 position, Quaternion rotation, RandomData spawnData)
+    {
+        this.spawnData = spawnData;
+        this.position = position;
+        this.rotation = rotation;
     }
 }
 public class testEditor : EditorWindow
@@ -23,6 +38,8 @@ public class testEditor : EditorWindow
 
     public float radius = 2f;
     public int spawnCount = 8;
+
+  
 
     bool random = true;
     bool single;
@@ -74,7 +91,7 @@ public class testEditor : EditorWindow
 
         for (int i = 0; i < spawnCount; i++)
         {
-            spawnDataPoints[i].SetRandomValues();
+            spawnDataPoints[i].SetRandomValues(spawnPrefabs);
         }
     }
 
@@ -101,13 +118,10 @@ public class testEditor : EditorWindow
             GUI.FocusControl(null);
             Repaint();
         }
-
-
+         
           GUILayout.BeginHorizontal();
 
-         Color original = GUI.backgroundColor;
-
-
+         Color original = GUI.backgroundColor; 
          //buttons, changes colour based on previously selected, changes boolean
          if (random)
              GUI.backgroundColor = Color.black;
@@ -129,61 +143,51 @@ public class testEditor : EditorWindow
              random = false;
          }
          GUI.backgroundColor = original;
-         GUILayout.EndHorizontal();
-       
+         GUILayout.EndHorizontal(); 
     }
 
     //this function draws spheres around raycasted points fed into it
     void DrawSphere(Vector3 pos)
     { 
-            Handles.SphereHandleCap(-1, pos, Quaternion.identity, 0.3f, EventType.Repaint);
-       
+            Handles.SphereHandleCap(-1, pos, Quaternion.identity, 0.3f, EventType.Repaint); 
     }
 
 
     //spawns prefabs at the raycast points
-    void TrySpawnPrefab(List<Pose> poses)
+    void TrySpawnPrefab(List<SpawnPoint> spawnPoints)
     {
-        if (spawnPrefabs.Count == 0)
-            return;
+        
         Ray singleRay = HandleUtility.GUIPointToWorldRay(Event.current.mousePosition);
 
         if (random)
         { 
-            foreach (Pose pose in poses)
+            foreach (SpawnPoint spawnPoint in spawnPoints)
             {
             GameObject spawnedThing = (GameObject)PrefabUtility.InstantiatePrefab(spawnPrefabs[0]);
             //adds spawned objects to list so the user can undo
             Undo.RegisterCreatedObjectUndo(spawnedThing, "Spawn Objects");
-            spawnedThing.transform.position = pose.position;
-            spawnedThing.transform.rotation = pose.rotation;
- 
-            }
-
+            spawnedThing.transform.position = spawnPoint.position;
+            spawnedThing.transform.rotation = spawnPoint.rotation; 
+            } 
         }
         else if (Physics.Raycast(singleRay, out RaycastHit hit))
         {
-            GameObject spawnedThing = (GameObject)PrefabUtility.InstantiatePrefab(spawnPrefabs[0]);
-
+            GameObject spawnedThing = (GameObject)PrefabUtility.InstantiatePrefab(spawnPrefabs[0]); 
             Undo.RegisterCreatedObjectUndo(spawnedThing, "Spawn Objects");
             spawnedThing.transform.position = hit.point;
 
             float randAngleDeg = Random.value * 360;
-            Quaternion randRot = Quaternion.Euler(0f, 0f, randAngleDeg);
-
+            Quaternion randRot = Quaternion.Euler(0f, 0f, randAngleDeg); 
             Quaternion rot = Quaternion.LookRotation(hit.normal) * (randRot * Quaternion.Euler(90f, 0f, 0f));
             spawnedThing.transform.rotation = rot;
         }
-        // for every raycast hit, this is calculated
-
+        // for every raycast hit, this is calculated 
         //generates different random points after each spawn
         GenerateRandomPoints();
     }
     bool TryRaycastFromCamera(Vector2 cameraUp, out Matrix4x4 tangentToWorldMtx)
     {
-        Ray ray = HandleUtility.GUIPointToWorldRay(Event.current.mousePosition);
-
-         
+        Ray ray = HandleUtility.GUIPointToWorldRay(Event.current.mousePosition); 
         if (Physics.Raycast(ray, out RaycastHit hit))
         { 
             // setting up tangent space
@@ -192,8 +196,7 @@ public class testEditor : EditorWindow
             Vector3 hitBitangent = Vector3.Cross(hitNormal, hitTangent);
             tangentToWorldMtx = Matrix4x4.TRS(hit.point, Quaternion.LookRotation(hitNormal, hitBitangent), Vector3.one);
             return true;
-        }
-
+        } 
         tangentToWorldMtx = default;
         return false;
     }
@@ -201,8 +204,7 @@ public class testEditor : EditorWindow
 
     //while the scene is active
     void DuringSceneGUI(SceneView sceneView)
-    {
-
+    { 
         Handles.BeginGUI();
         Rect rect = new Rect(8, 8, 64, 64);
 
@@ -213,95 +215,82 @@ public class testEditor : EditorWindow
             EditorGUI.BeginChangeCheck();
             selectedPrefabState[i] = (GUI.Toggle(rect, selectedPrefabState[i], new GUIContent(icon)));
             if (EditorGUI.EndChangeCheck())
-            {
-
+            { 
                 //updates selected prefab list
                 spawnPrefabs.Clear();
                 for (int j = 0; j < prefabs.Length; j++)
                 {
                     if (selectedPrefabState[j] == true)
-                        spawnPrefabs.Add(prefabs[j]);
-
+                        spawnPrefabs.Add(prefabs[j]); 
                 }
             }
-            //  spawnPrefab = prefab;
-
+            //  spawnPrefab = prefab; 
             rect.y += rect.height + 2;
         }
         Handles.EndGUI();
-
-
+         
         Transform cTransform = sceneView.camera.transform;
         //repaints when mouse moves
         if (Event.current.type == EventType.MouseMove)
         {
             sceneView.Repaint();
-        }
-
-
+        } 
         //bool holdingAlt = (Event.current.modifiers & EventModifiers.Alt) != 0;
-        //Handles.zTest = CompareFunction.LessEqual;
-
-        bool altControl = (Event.current.modifiers & EventModifiers.Control) != 0;
-
+        //Handles.zTest = CompareFunction.LessEqual; 
+        bool altControl = (Event.current.modifiers & EventModifiers.Control) != 0; 
         //if current button is held is space + ctrl, uses event because we are using UI input
 
         if (Event.current.type == EventType.ScrollWheel && altControl == true & single != true)
         {
-            float dir = Mathf.Sign(Event.current.delta.y);
-
+            float dir = Mathf.Sign(Event.current.delta.y); 
             so.Update();
             //lowers the radius, slows down the smaller the value
             propRadius.floatValue *= 1f + dir * 0.05f;
             so.ApplyModifiedProperties();
-            Repaint(); //updates editor
-
+            Repaint(); //updates editor 
             //Scroll, consume event, no longer mouse wheel just change radius.
             Event.current.Use();
         }
+
         if (TryRaycastFromCamera(cTransform.up, out Matrix4x4 tangentToWorld))
-        {
-            // draw circle marker
-            DrawCircleRegion(tangentToWorld);
-
+        { 
             // draw all spawn positions and meshes
-            List<Pose> spawnPoses = GetSpawnPoses(tangentToWorld);
-            DrawSpawnPreviews(spawnPoses);
+            List<SpawnPoint> spawnPoints = GetSpawnPoints(tangentToWorld);
 
+            if(Event.current.type == EventType.Repaint)
+            {
+                // draw circle marker
+                DrawCircleRegion(tangentToWorld);
+                DrawSpawnPreviews(spawnPoints, sceneView.camera);
+            } 
             // spawn on press
             if (Event.current.type == EventType.KeyDown && Event.current.keyCode == KeyCode.Space)
-                TrySpawnPrefab(spawnPoses);
-        } //tracks mouse movement
+                TrySpawnPrefab(spawnPoints);
+        }  
 
-        void DrawSpawnPreviews(List<Pose> spawnPoses)
+        void DrawSpawnPreviews(List<SpawnPoint> spawnPoints, Camera cam)
         {
             if (random)
             {
-                  foreach (Pose pose in spawnPoses)
-                  {
-               
-                    if (spawnPrefab != null)
+                  foreach (SpawnPoint spawnPoint in spawnPoints)
+                  { 
+                    if (spawnPrefab != null && spawnPrefabs.Count > 0)
                     {
                         // draw preview of all meshes in the prefab
-                        Matrix4x4 poseToWorld = Matrix4x4.TRS(pose.position, pose.rotation, Vector3.one);
+                        Matrix4x4 poseToWorld = Matrix4x4.TRS(spawnPoint.position, spawnPoint.rotation, Vector3.one);
                         DrawPrefab(spawnPrefab, poseToWorld);
                     }
                     else
                     {
-                        // prefab missing, draw sphere and normal on surface instead
-
-                        Handles.SphereHandleCap(-1, pose.position, Quaternion.identity, 0.1f, EventType.Repaint);
-                        Handles.DrawAAPolyLine(pose.position, pose.position + pose.up); 
-                    }
-                
-                 
-                
+                        // prefab missing, draw sphere and normal on surface instead 
+                        Handles.SphereHandleCap(-1, spawnPoint.position, Quaternion.identity, 0.1f, EventType.Repaint);
+                        Handles.DrawAAPolyLine(spawnPoint.position, spawnPoint.position + spawnPoint.up); 
+                    }  
                   }
             }
             else
             {
-                 Ray singleRay = HandleUtility.GUIPointToWorldRay(Event.current.mousePosition);
-
+                 Ray singleRay = HandleUtility.GUIPointToWorldRay(Event.current.mousePosition); 
                 if(Physics.Raycast(singleRay, out RaycastHit hit)) 
                 { 
                     if (spawnPrefab != null)
@@ -317,8 +306,7 @@ public class testEditor : EditorWindow
                         Handles.DrawAAPolyLine(9, hit.point, hit.point + hit.normal);
                     }
                 }
-            }
-            
+            } 
         }
         static void DrawPrefab(GameObject prefab, Matrix4x4 poseToWorld)
         {
@@ -333,9 +321,9 @@ public class testEditor : EditorWindow
                 Graphics.DrawMeshNow(mesh, childToWorldMtx);
             }
         }
-        List<Pose> GetSpawnPoses(Matrix4x4 tangentToWorld)
+        List<SpawnPoint> GetSpawnPoints(Matrix4x4 tangentToWorld)
         {
-            List<Pose> hitPoses = new List<Pose>();
+            List<SpawnPoint> hitSpawnPoints = new List<SpawnPoint>();
             foreach (RandomData rndDataPoint in spawnDataPoints)
             {
                 // create ray for this point
@@ -346,12 +334,11 @@ public class testEditor : EditorWindow
                     // calculate rotation and assign to pose together with position
                     Quaternion randRot = Quaternion.Euler(0f, 0f, rndDataPoint.randomAngleDeg);
                     Quaternion rot = Quaternion.LookRotation(ptHit.normal) * (randRot * Quaternion.Euler(90f, 0f, 0f));
-                    Pose pose = new Pose(ptHit.point, rot);
-                    hitPoses.Add(pose);
+                    SpawnPoint spawnPoint = new SpawnPoint(ptHit.point, rot, rndDataPoint);
+                    hitSpawnPoints.Add(spawnPoint);
                 }
-            }
-
-            return hitPoses;
+            } 
+            return hitSpawnPoints;
         }
         Ray GetCircleRay(Matrix4x4 tangentToWorld, Vector2 pointInCircle)
         {
@@ -385,8 +372,7 @@ public class testEditor : EditorWindow
                 }
             }
             if(random)
-                Handles.DrawAAPolyLine(ringPoints);
-
+                Handles.DrawAAPolyLine(ringPoints); 
         }
         void DrawAxes(Matrix4x4 localToWorld)
         {
@@ -404,9 +390,7 @@ public class testEditor : EditorWindow
             {
                  //Handles.DrawAAPolyLine(6, pt, pt + localToWorld.MultiplyVector(Vector3.forward));
                 return;
-            }
-
-            
+            } 
         }
     }
 } 
