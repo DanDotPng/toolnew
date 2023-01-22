@@ -70,7 +70,7 @@ public class testEditor : EditorWindow
     void OnEnable()
     { 
         so = new SerializedObject(this);
-        Debug.Log(filters.Length);
+
         propRadius = so.FindProperty("radius");
         propSpawnCount = so.FindProperty("spawnCount");
        // propSpawnPrefab = so.FindProperty("spawnPrefab");
@@ -208,7 +208,6 @@ public class testEditor : EditorWindow
                 {
                     if (selectedPrefabState[j] == true)
                         spawnPrefabs.Add(prefabs[j]);
-                     
 
                 }
             }
@@ -320,7 +319,7 @@ public class testEditor : EditorWindow
                         Handles.DrawAAPolyLine(ringPoints);
 
 
-                        if(spawnPoint.spawnData.spawnPrefab != null)
+                        if(spawnPrefabs != null && spawnPrefabs.Count > 0)
                         {
                             //mesh preview
                             Matrix4x4 poseToWorld = Matrix4x4.TRS(spawnPoint.position, spawnPoint.rotation, Vector3.one);
@@ -329,7 +328,6 @@ public class testEditor : EditorWindow
                             for (int i = 0; i < spawnPrefabs.Count; i++)
                             {
                                 filters = spawnPrefabs[i].GetComponentsInChildren<MeshFilter>();
-                                 
                             }
                            
 
