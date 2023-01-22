@@ -103,7 +103,7 @@ public class testEditor : EditorWindow
         }
 
 
-        /* GUILayout.BeginHorizontal();
+          GUILayout.BeginHorizontal();
 
          Color original = GUI.backgroundColor;
 
@@ -130,13 +130,14 @@ public class testEditor : EditorWindow
          }
          GUI.backgroundColor = original;
          GUILayout.EndHorizontal();
-       */
+       
     }
 
     //this function draws spheres around raycasted points fed into it
     void DrawSphere(Vector3 pos)
-    {
-        Handles.SphereHandleCap(-1, pos, Quaternion.identity, 0.1f, EventType.Repaint);
+    { 
+            Handles.SphereHandleCap(-1, pos, Quaternion.identity, 0.3f, EventType.Repaint);
+       
     }
 
 
@@ -145,25 +146,46 @@ public class testEditor : EditorWindow
     {
         if (spawnPrefabs.Count == 0)
             return;
+        Ray singleRay = HandleUtility.GUIPointToWorldRay(Event.current.mousePosition);
 
-        // for every raycast hit, this is calculated
-        foreach (Pose pose in poses)
-        {
+        if (random)
+        { 
+            foreach (Pose pose in poses)
+            {
             GameObject spawnedThing = (GameObject)PrefabUtility.InstantiatePrefab(spawnPrefabs[0]);
             //adds spawned objects to list so the user can undo
             Undo.RegisterCreatedObjectUndo(spawnedThing, "Spawn Objects");
             spawnedThing.transform.position = pose.position;
             spawnedThing.transform.rotation = pose.rotation;
+ 
+            }
 
         }
+        else if (Physics.Raycast(singleRay, out RaycastHit hit))
+        {
+            GameObject spawnedThing = (GameObject)PrefabUtility.InstantiatePrefab(spawnPrefabs[0]);
+
+            Undo.RegisterCreatedObjectUndo(spawnedThing, "Spawn Objects");
+            spawnedThing.transform.position = hit.point;
+
+            float randAngleDeg = Random.value * 360;
+            Quaternion randRot = Quaternion.Euler(0f, 0f, randAngleDeg);
+
+            Quaternion rot = Quaternion.LookRotation(hit.normal) * (randRot * Quaternion.Euler(90f, 0f, 0f));
+            spawnedThing.transform.rotation = rot;
+        }
+        // for every raycast hit, this is calculated
+
         //generates different random points after each spawn
         GenerateRandomPoints();
     }
     bool TryRaycastFromCamera(Vector2 cameraUp, out Matrix4x4 tangentToWorldMtx)
     {
         Ray ray = HandleUtility.GUIPointToWorldRay(Event.current.mousePosition);
+
+         
         if (Physics.Raycast(ray, out RaycastHit hit))
-        {
+        { 
             // setting up tangent space
             Vector3 hitNormal = hit.normal;
             Vector3 hitTangent = Vector3.Cross(hitNormal, cameraUp).normalized;
@@ -253,21 +275,50 @@ public class testEditor : EditorWindow
 
         void DrawSpawnPreviews(List<Pose> spawnPoses)
         {
-            foreach (Pose pose in spawnPoses)
+            if (random)
             {
-                if (spawnPrefab != null)
-                {
-                    // draw preview of all meshes in the prefab
-                    Matrix4x4 poseToWorld = Matrix4x4.TRS(pose.position, pose.rotation, Vector3.one);
-                    DrawPrefab(spawnPrefab, poseToWorld);
-                }
-                else
-                {
-                    // prefab missing, draw sphere and normal on surface instead
-                    Handles.SphereHandleCap(-1, pose.position, Quaternion.identity, 0.1f, EventType.Repaint);
-                    Handles.DrawAAPolyLine(pose.position, pose.position + pose.up);
+                  foreach (Pose pose in spawnPoses)
+                  {
+               
+                    if (spawnPrefab != null)
+                    {
+                        // draw preview of all meshes in the prefab
+                        Matrix4x4 poseToWorld = Matrix4x4.TRS(pose.position, pose.rotation, Vector3.one);
+                        DrawPrefab(spawnPrefab, poseToWorld);
+                    }
+                    else
+                    {
+                        // prefab missing, draw sphere and normal on surface instead
+
+                        Handles.SphereHandleCap(-1, pose.position, Quaternion.identity, 0.1f, EventType.Repaint);
+                        Handles.DrawAAPolyLine(pose.position, pose.position + pose.up); 
+                    }
+                
+                 
+                
+                  }
+            }
+            else
+            {
+                 Ray singleRay = HandleUtility.GUIPointToWorldRay(Event.current.mousePosition);
+
+                if(Physics.Raycast(singleRay, out RaycastHit hit)) 
+                { 
+                    if (spawnPrefab != null)
+                    {
+                        // draw preview of all meshes in the prefab
+                          // Matrix4x4 poseToWorld = Matrix4x4.TRS(pose.position, pose.rotation, Vector3.one);
+                        //   DrawPrefab(spawnPrefab, hit.point);
+                    }
+                    else
+                    {
+                        // prefab missing, draw sphere and normal on surface instead 
+                        DrawSphere(hit.point);
+                        Handles.DrawAAPolyLine(9, hit.point, hit.point + hit.normal);
+                    }
                 }
             }
+            
         }
         static void DrawPrefab(GameObject prefab, Matrix4x4 poseToWorld)
         {
@@ -333,18 +384,29 @@ public class testEditor : EditorWindow
                     ringPoints[i] = r.origin;
                 }
             }
+            if(random)
+                Handles.DrawAAPolyLine(ringPoints);
 
-            Handles.DrawAAPolyLine(ringPoints);
         }
         void DrawAxes(Matrix4x4 localToWorld)
         {
-            Vector3 pt = localToWorld.MultiplyPoint3x4(Vector3.zero);
-            Handles.color = Color.red;
-            Handles.DrawAAPolyLine(6, pt, pt + localToWorld.MultiplyVector(Vector3.right));
-            Handles.color = Color.green;
-            Handles.DrawAAPolyLine(6, pt, pt + localToWorld.MultiplyVector(Vector3.up));
-            Handles.color = Color.blue;
-            Handles.DrawAAPolyLine(6, pt, pt + localToWorld.MultiplyVector(Vector3.forward));
+            if (random)
+            {
+                Vector3 pt = localToWorld.MultiplyPoint3x4(Vector3.zero);
+                Handles.color = Color.red;
+                Handles.DrawAAPolyLine(6, pt, pt + localToWorld.MultiplyVector(Vector3.right));
+                Handles.color = Color.green;
+                Handles.DrawAAPolyLine(6, pt, pt + localToWorld.MultiplyVector(Vector3.up));
+                Handles.color = Color.blue;
+                Handles.DrawAAPolyLine(6, pt, pt + localToWorld.MultiplyVector(Vector3.forward));
+            }
+            else
+            {
+                 //Handles.DrawAAPolyLine(6, pt, pt + localToWorld.MultiplyVector(Vector3.forward));
+                return;
+            }
+
+            
         }
     }
-}
+} 
