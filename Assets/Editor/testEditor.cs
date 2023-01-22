@@ -4,7 +4,17 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEditor;
 using System.Linq;
+public struct RandomData
+{
+    public Vector2 pointInDisc;
+    public float randomAngleDeg;
 
+    public void SetRandomValues()
+    {
+        pointInDisc = Random.insideUnitCircle;
+        randomAngleDeg = Random.value * 360;
+    }
+}
 public class testEditor : EditorWindow
 {
     //This creates the menu at the top. We use the name "tools" since thats a common library name and prevents clutter.
@@ -25,24 +35,13 @@ public class testEditor : EditorWindow
     SerializedProperty propSpawnCount;
     SerializedProperty propSpawnPrefab;
     SerializedProperty propPreviewMat;
-  public  MeshFilter[] filters;
-  [SerializeField] bool[] selectedPrefabState;
 
-    public struct RandomData
-    {
-        public Vector2 pointInDisc;
-        public float randomAngleDeg;
+    public  MeshFilter[] filters;
+    [SerializeField] bool[] selectedPrefabState;
 
-        public void SetRandomValues()
-        {
-            pointInDisc = Random.insideUnitCircle;
-            randomAngleDeg = Random.value * 360;
-        }
-    }
-
-    RandomData[] randPoints;
-
+    RandomData[] spawnDataPoints;
     GameObject[] prefabs;
+    GameObject spawnPrefab;
 
     //disables GUI when not using the scene view. so like if you click out or something.
     void OnEnable()
@@ -71,11 +70,11 @@ public class testEditor : EditorWindow
     
     void GenerateRandomPoints()
     {
-        randPoints = new RandomData[spawnCount];
+        spawnDataPoints = new RandomData[spawnCount];
         
         for (int i = 0; i < spawnCount; i++)
         {
-            randPoints[i].SetRandomValues();
+            spawnDataPoints[i].SetRandomValues();
         }
     }
 
@@ -269,7 +268,7 @@ public class testEditor : EditorWindow
             }
 
             List<Pose> hitPoses = new List<Pose>();
-            foreach (RandomData rndDataPoint in randPoints)
+            foreach (RandomData rndDataPoint in spawnDataPoints)
             {
                 Ray ptRay = GetTangentRay(rndDataPoint.pointInDisc);
 
