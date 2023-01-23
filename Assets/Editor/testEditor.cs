@@ -442,7 +442,7 @@ public class testEditor : EditorWindow
 
         void DrawCircleRegion(Matrix4x4 localToWorld)
         {
-            DrawAxes(localToWorld);
+          //  DrawAxes(localToWorld);
             // draw circle adapted to the terrain
             const int circleDetail = 128;
             Vector3[] ringPoints = new Vector3[circleDetail];
@@ -465,7 +465,7 @@ public class testEditor : EditorWindow
             if(random || erase)
                 Handles.DrawAAPolyLine(ringPoints); 
         }
-        void DrawAxes(Matrix4x4 localToWorld)
+       /* void DrawAxes(Matrix4x4 localToWorld)
         {
             if (random)
             {
@@ -483,5 +483,6 @@ public class testEditor : EditorWindow
                 return;
             } 
         }
+        */
     }
 } 
