@@ -1,9 +1,12 @@
 
-using System.Collections;
+using System;
 using System.Collections.Generic;
-using UnityEngine;
-using UnityEditor;
 using System.Linq;
+using UnityEditor;
+using UnityEditor.EditorTools;
+using UnityEngine;
+using UnityEngine.Rendering;
+using Random = UnityEngine.Random;
 public struct RandomData
 {
     public Vector2 pointInDisc;
@@ -29,12 +32,35 @@ public struct SpawnPoint
     public RandomData spawnData;
     public Vector3 position;
     public Quaternion rotation;
-    public Vector3 up => rotation * up;
+    public bool valid;
+
+    public Vector3 Up => rotation * Vector3.up;
     public SpawnPoint(Vector3 position, Quaternion rotation, RandomData spawnData)
     {
+        valid = false;
         this.spawnData = spawnData;
         this.position = position;
         this.rotation = rotation;
+        if(spawnData.prefab != null)
+        {
+            prefabData spawnablePrefab = spawnData.prefab.GetComponent<prefabData>();
+
+            if (spawnablePrefab == null)
+            {
+                valid = true;
+            }
+            else
+            {
+                float height = spawnablePrefab.height;
+                Ray ray = new Ray(position, Up);
+                valid = Physics.Raycast(ray, height) == false;
+            }
+        }
+        
+
+       
+
+         
     }
 }
 public class testEditor : EditorWindow
@@ -48,6 +74,7 @@ public class testEditor : EditorWindow
      
     bool random = true;
     bool single;
+    bool erase;
 
     public Material previewMat; 
 
@@ -64,12 +91,13 @@ public class testEditor : EditorWindow
     GameObject[] prefabs;
     GameObject spawnPrefab;
     List<GameObject> spawnPrefabs = new List<GameObject>();
+    List<GameObject> spawnedObjects = new List<GameObject>();
 
     //disables GUI when not using the scene view. so like if you click out or something.
     void OnEnable()
     {
         so = new SerializedObject(this);
-
+        spawnedObjects = new List<GameObject>();
         propRadius = so.FindProperty("radius");
         propSpawnCount = so.FindProperty("spawnCount");
         // propprefab= so.FindProperty("spawnPrefab");
@@ -135,6 +163,7 @@ public class testEditor : EditorWindow
          {
              single = false;
              random = true;
+            erase = false;
          }
 
          GUI.backgroundColor = original;
@@ -146,9 +175,21 @@ public class testEditor : EditorWindow
          {
              single = true;
              random = false;
-         }
+            erase = false;
+        }
          GUI.backgroundColor = original;
-         GUILayout.EndHorizontal(); 
+
+        if (erase)
+            GUI.backgroundColor = Color.black;
+
+        if (GUILayout.Button("Erase"))
+        {
+            single = false;
+            random = false;
+            erase = true;
+        }
+        GUI.backgroundColor = original;
+        GUILayout.EndHorizontal(); 
     }
 
     //this function draws spheres around raycasted points fed into it
@@ -165,16 +206,23 @@ public class testEditor : EditorWindow
             return;
          
         Ray singleRay = HandleUtility.GUIPointToWorldRay(Event.current.mousePosition);
-
+        
         if (random)
         { 
             foreach (SpawnPoint spawnPoint in spawnPoints)
             {
-            GameObject spawnedThing = (GameObject)PrefabUtility.InstantiatePrefab(spawnPoint.spawnData.prefab);
-           //adds spawned objects to list so the user can undo
+                if (spawnPoint.valid == false)
+                {
+                    continue;
+                }  
+             GameObject spawnedThing = (GameObject)PrefabUtility.InstantiatePrefab(spawnPoint.spawnData.prefab);
+                 
+             //   Debug.Log(spawnedObjects);
+             //adds spawned objects to list so the user can undo
              Undo.RegisterCreatedObjectUndo(spawnedThing, "Spawn Objects");
-            spawnedThing.transform.position = spawnPoint.position;
-            spawnedThing.transform.rotation = spawnPoint.rotation; 
+             spawnedThing.transform.position = spawnPoint.position;
+             spawnedThing.transform.rotation = spawnPoint.rotation;
+                spawnedObjects.Add(spawnedThing);
             } 
         }
         else if (Physics.Raycast(singleRay, out RaycastHit hit))
@@ -187,11 +235,47 @@ public class testEditor : EditorWindow
             Quaternion randRot = Quaternion.Euler(0f, 0f, randAngleDeg); 
             Quaternion rot = Quaternion.LookRotation(hit.normal) * (randRot * Quaternion.Euler(90f, 0f, 0f));
             spawnedThing.transform.rotation = rot;
+            spawnedObjects.Add(spawnedThing);
         }
         // for every raycast hit, this is calculated 
         //generates different random points after each spawn
         GenerateRandomPoints();
     }
+
+    void TryErasePrefab()
+    {
+     //   float eraseDistance = radius;
+
+        Ray ray = HandleUtility.GUIPointToWorldRay(Event.current.mousePosition);
+        
+        if (Physics.Raycast(ray, out RaycastHit hit))
+        {
+
+            for (int i = spawnedObjects.Count - 1; i >= 0; i--)
+            {
+               if(spawnedObjects[i] == null)
+                {
+                    spawnedObjects.RemoveAt(i);
+                    continue;
+                }
+                    
+
+                //Debug.Log(spawnedObject);
+                float Distance = Vector3.Distance(spawnedObjects[i].transform.position, hit.point);
+                if (Distance < radius)
+                {
+                    
+                
+                    Undo.DestroyObjectImmediate(spawnedObjects[i]);
+                    spawnedObjects.RemoveAt(i);
+
+                }
+                              
+            }
+
+        }
+    }
+
     bool TryRaycastFromCamera(Vector2 cameraUp, out Matrix4x4 tangentToWorldMtx)
     {
         Ray ray = HandleUtility.GUIPointToWorldRay(Event.current.mousePosition); 
@@ -272,12 +356,16 @@ public class testEditor : EditorWindow
                 // draw circle marker
                 DrawCircleRegion(tangentToWorld);
                 DrawSpawnPreviews(spawnPoints, sceneView.camera);
-            } 
+            }
             // spawn on press
             if (Event.current.type == EventType.KeyDown && Event.current.keyCode == KeyCode.Space)
-                TrySpawnPrefab(spawnPoints);
+                if (!erase)
+                    TrySpawnPrefab(spawnPoints);
+                else if (erase)
+                    TryErasePrefab();
         }
 
+        
        
 
         void DrawSpawnPreviews(List<SpawnPoint> spawnPoints, Camera cam)
@@ -286,7 +374,7 @@ public class testEditor : EditorWindow
             {
                   foreach (SpawnPoint spawnPoint in spawnPoints)
                   { 
-                    if (spawnPoint.spawnData.prefab!= null)
+                    if (spawnPoint.spawnData.prefab!= null && spawnPoint.valid)
                     {
                         // draw preview of all meshes in the prefab
                         Matrix4x4 poseToWorld = Matrix4x4.TRS(spawnPoint.position, spawnPoint.rotation, Vector3.one);
@@ -321,7 +409,7 @@ public class testEditor : EditorWindow
                 Mesh mesh = filter.sharedMesh;
                 Material mat = filter.GetComponent<MeshRenderer>().sharedMaterial;
                 mat.SetPass(0);
-                Graphics.DrawMeshNow(mesh, childToWorldMtx);
+                Graphics.DrawMesh(mesh, childToWorldMtx, mat, 0, cam );
             }
         }
         List<SpawnPoint> GetSpawnPoints(Matrix4x4 tangentToWorld)
@@ -374,7 +462,7 @@ public class testEditor : EditorWindow
                     ringPoints[i] = r.origin;
                 }
             }
-            if(random)
+            if(random || erase)
                 Handles.DrawAAPolyLine(ringPoints); 
         }
         void DrawAxes(Matrix4x4 localToWorld)

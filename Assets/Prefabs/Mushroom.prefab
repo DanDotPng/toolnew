@@ -9,6 +9,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 5577010018513186939}
+  - component: {fileID: 1960438147684973332}
   m_Layer: 0
   m_Name: Mushroom
   m_TagString: Untagged
@@ -24,7 +25,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 3645777485176409188}
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalPosition: {x: 0, y: -0.14, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
@@ -33,6 +34,19 @@ Transform:
   m_Father: {fileID: 0}
   m_RootOrder: 0
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1960438147684973332
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3645777485176409188}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6017337974920744baef6760dc3f4aeb, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  height: 3.5
 --- !u!1001 &5435570884693186448
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -62,7 +76,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 3357984522887286528, guid: c236b667eb8ecf945aba5718cc4189fb, type: 3}
       propertyPath: m_LocalPosition.y
-      value: 2.6360002
+      value: 2.4550002
       objectReference: {fileID: 0}
     - target: {fileID: 3357984522887286528, guid: c236b667eb8ecf945aba5718cc4189fb, type: 3}
       propertyPath: m_LocalPosition.z
@@ -104,7 +118,8 @@ PrefabInstance:
       propertyPath: m_Materials.Array.data[0]
       value: 
       objectReference: {fileID: 2100000, guid: 550088c93a897af4b974cf8e23127985, type: 2}
-    m_RemovedComponents: []
+    m_RemovedComponents:
+    - {fileID: 3299083273791755383, guid: c236b667eb8ecf945aba5718cc4189fb, type: 3}
   m_SourcePrefab: {fileID: 100100000, guid: c236b667eb8ecf945aba5718cc4189fb, type: 3}
 --- !u!4 &7347327892661147792 stripped
 Transform:
@@ -132,7 +147,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 3357984522887286528, guid: c236b667eb8ecf945aba5718cc4189fb, type: 3}
       propertyPath: m_LocalPosition.y
-      value: 1.071
+      value: 0.89
       objectReference: {fileID: 0}
     - target: {fileID: 3357984522887286528, guid: c236b667eb8ecf945aba5718cc4189fb, type: 3}
       propertyPath: m_LocalPosition.z
