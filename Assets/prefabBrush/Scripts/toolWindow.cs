@@ -63,11 +63,11 @@ public struct SpawnPoint
          
     }
 }
-public class testEditor : EditorWindow
+public class toolWindow : EditorWindow
 {
     //This creates the menu at the top. We use the name "tools" since thats a common library name and prevents clutter.
-    [MenuItem("Tools/Test Library")]
-    public static void ShowWindow() => GetWindow<testEditor>();
+    [MenuItem("Tools/Tool Window")]
+    public static void ShowWindow() => GetWindow<toolWindow>();
 
     public float radius = 2f;
     public int spawnCount = 8;
@@ -106,7 +106,7 @@ public class testEditor : EditorWindow
         GenerateRandomPoints();
         SceneView.duringSceneGui += DuringSceneGUI;
 
-        string[] guids = AssetDatabase.FindAssets("t:prefab", new[] { "Assets/Prefabs" });
+        string[] guids = AssetDatabase.FindAssets("t:prefab", new[] { "Assets/prefabBrush/spawnablePrefabs" });
         IEnumerable<string> paths = guids.Select(AssetDatabase.GUIDToAssetPath);
         prefabs = paths.Select(AssetDatabase.LoadAssetAtPath<GameObject>).ToArray();
         if (selectedPrefabState == null || selectedPrefabState.Length != prefabs.Length)
@@ -114,6 +114,18 @@ public class testEditor : EditorWindow
             selectedPrefabState = new bool[prefabs.Length];
         }
 
+    }
+
+    void addPrefab()
+    { 
+
+        string[] guids = AssetDatabase.FindAssets("t:prefab", new[] { "Assets/prefabBrush/spawnablePrefabs" });
+        IEnumerable<string> paths = guids.Select(AssetDatabase.GUIDToAssetPath);
+        prefabs = paths.Select(AssetDatabase.LoadAssetAtPath<GameObject>).ToArray();
+        if (selectedPrefabState == null || selectedPrefabState.Length != prefabs.Length)
+        {
+            selectedPrefabState = new bool[prefabs.Length];
+        }
     }
 
     void OnDisable() => SceneView.duringSceneGui -= DuringSceneGUI;
@@ -189,7 +201,15 @@ public class testEditor : EditorWindow
             erase = true;
         }
         GUI.backgroundColor = original;
-        GUILayout.EndHorizontal(); 
+        GUILayout.EndHorizontal();
+
+        GUILayout.BeginHorizontal();
+        if (GUILayout.Button("Refresh Prefabs"))
+        {
+            addPrefab();
+        }
+        GUILayout.EndHorizontal();
+
     }
 
     //this function draws spheres around raycasted points fed into it
@@ -358,7 +378,7 @@ public class testEditor : EditorWindow
                 DrawSpawnPreviews(spawnPoints, sceneView.camera);
             }
             // spawn on press
-            if (Event.current.type == EventType.KeyDown && Event.current.keyCode == KeyCode.Space)
+            if (Event.current.type == EventType.KeyDown && Event.current.keyCode == KeyCode.Space && altControl)
                 if (!erase)
                     TrySpawnPrefab(spawnPoints);
                 else if (erase)
