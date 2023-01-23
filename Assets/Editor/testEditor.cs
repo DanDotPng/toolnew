@@ -13,7 +13,12 @@ public struct RandomData
     {
         pointInDisc = Random.insideUnitCircle;
         randomAngleDeg = Random.value * 360;
-        spawnPrefab = prefabs[Random.Range(0, prefabs.Count)];
+        if (prefabs.Count == 0)
+            spawnPrefab = null;
+        else
+           spawnPrefab = prefabs[Random.Range(0, prefabs.Count)];
+
+    //    spawnPrefab = prefabs.Count == 0 ? null : prefabs[Random.Range(0, prefabs.Count)];
     }
 }
 
@@ -38,14 +43,11 @@ public class testEditor : EditorWindow
 
     public float radius = 2f;
     public int spawnCount = 8;
-
-  
-
+     
     bool random = true;
     bool single;
 
-    public Material previewMat;
-    List<GameObject> spawnPrefabs = new List<GameObject>();
+    public Material previewMat; 
 
     SerializedObject so;
     SerializedProperty propRadius;
@@ -59,6 +61,7 @@ public class testEditor : EditorWindow
     RandomData[] spawnDataPoints;
     GameObject[] prefabs;
     GameObject spawnPrefab;
+    List<GameObject> spawnPrefabs = new List<GameObject>();
 
     //disables GUI when not using the scene view. so like if you click out or something.
     void OnEnable()
@@ -163,9 +166,9 @@ public class testEditor : EditorWindow
         { 
             foreach (SpawnPoint spawnPoint in spawnPoints)
             {
-            GameObject spawnedThing = (GameObject)PrefabUtility.InstantiatePrefab(spawnPrefabs[0]);
-            //adds spawned objects to list so the user can undo
-            Undo.RegisterCreatedObjectUndo(spawnedThing, "Spawn Objects");
+            GameObject spawnedThing = (GameObject)PrefabUtility.InstantiatePrefab(spawnPoint.spawnData.spawnPrefab );
+           //adds spawned objects to list so the user can undo
+             Undo.RegisterCreatedObjectUndo(spawnedThing, "Spawn Objects");
             spawnedThing.transform.position = spawnPoint.position;
             spawnedThing.transform.rotation = spawnPoint.rotation; 
             } 
@@ -212,6 +215,7 @@ public class testEditor : EditorWindow
         {
             GameObject prefab = prefabs[i];
             Texture icon = AssetPreview.GetAssetPreview(prefab);
+
             EditorGUI.BeginChangeCheck();
             selectedPrefabState[i] = (GUI.Toggle(rect, selectedPrefabState[i], new GUIContent(icon)));
             if (EditorGUI.EndChangeCheck())
@@ -223,6 +227,8 @@ public class testEditor : EditorWindow
                     if (selectedPrefabState[j] == true)
                         spawnPrefabs.Add(prefabs[j]); 
                 }
+
+                GenerateRandomPoints();
             }
             //  spawnPrefab = prefab; 
             rect.y += rect.height + 2;
@@ -266,7 +272,9 @@ public class testEditor : EditorWindow
             // spawn on press
             if (Event.current.type == EventType.KeyDown && Event.current.keyCode == KeyCode.Space)
                 TrySpawnPrefab(spawnPoints);
-        }  
+        }
+
+       
 
         void DrawSpawnPreviews(List<SpawnPoint> spawnPoints, Camera cam)
         {
@@ -274,17 +282,17 @@ public class testEditor : EditorWindow
             {
                   foreach (SpawnPoint spawnPoint in spawnPoints)
                   { 
-                    if (spawnPrefab != null && spawnPrefabs.Count > 0)
+                    if (spawnPoint.spawnData.spawnPrefab != null)
                     {
                         // draw preview of all meshes in the prefab
                         Matrix4x4 poseToWorld = Matrix4x4.TRS(spawnPoint.position, spawnPoint.rotation, Vector3.one);
-                        DrawPrefab(spawnPrefab, poseToWorld);
+                        DrawPrefab(spawnPoint.spawnData.spawnPrefab, poseToWorld, cam);
                     }
                     else
                     {
                         // prefab missing, draw sphere and normal on surface instead 
-                        Handles.SphereHandleCap(-1, spawnPoint.position, Quaternion.identity, 0.1f, EventType.Repaint);
-                        Handles.DrawAAPolyLine(spawnPoint.position, spawnPoint.position + spawnPoint.up); 
+                      //  Handles.SphereHandleCap(-1, spawnPoint.position, Quaternion.identity, 0.1f, EventType.Repaint);
+                     //   Handles.DrawAAPolyLine(spawnPoint.position, spawnPoint.position + spawnPoint.up); 
                     }  
                   }
             }
@@ -308,7 +316,7 @@ public class testEditor : EditorWindow
                 }
             } 
         }
-        static void DrawPrefab(GameObject prefab, Matrix4x4 poseToWorld)
+        static void DrawPrefab(GameObject prefab, Matrix4x4 poseToWorld, Camera cam)
         {
             MeshFilter[] filters = prefab.GetComponentsInChildren<MeshFilter>();
             foreach (MeshFilter filter in filters)
