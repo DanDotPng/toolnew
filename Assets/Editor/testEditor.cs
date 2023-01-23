@@ -8,17 +8,19 @@ public struct RandomData
 {
     public Vector2 pointInDisc;
     public float randomAngleDeg;
-    public GameObject spawnPrefab;
+    public GameObject prefab;
     public void SetRandomValues(List<GameObject> prefabs)
     {
         pointInDisc = Random.insideUnitCircle;
         randomAngleDeg = Random.value * 360;
-        if (prefabs.Count == 0)
-            spawnPrefab = null;
-        else
-           spawnPrefab = prefabs[Random.Range(0, prefabs.Count)];
+         //    prefab= prefabs.Count == 0 ? null : prefabs[Random.Range(0, prefabs.Count)];
 
-    //    spawnPrefab = prefabs.Count == 0 ? null : prefabs[Random.Range(0, prefabs.Count)];
+        if (prefabs.Count == 0)
+            prefab = null;
+        else
+           prefab = prefabs[Random.Range(0, prefabs.Count)];
+         
+    
     }
 }
 
@@ -70,7 +72,7 @@ public class testEditor : EditorWindow
 
         propRadius = so.FindProperty("radius");
         propSpawnCount = so.FindProperty("spawnCount");
-        // propSpawnPrefab = so.FindProperty("spawnPrefab");
+        // propprefab= so.FindProperty("spawnPrefab");
         propPreviewMat = so.FindProperty("previewMat");
 
         GenerateRandomPoints();
@@ -159,14 +161,16 @@ public class testEditor : EditorWindow
     //spawns prefabs at the raycast points
     void TrySpawnPrefab(List<SpawnPoint> spawnPoints)
     {
-        
+        if (spawnPrefabs.Count == 0)
+            return;
+         
         Ray singleRay = HandleUtility.GUIPointToWorldRay(Event.current.mousePosition);
 
         if (random)
         { 
             foreach (SpawnPoint spawnPoint in spawnPoints)
             {
-            GameObject spawnedThing = (GameObject)PrefabUtility.InstantiatePrefab(spawnPoint.spawnData.spawnPrefab );
+            GameObject spawnedThing = (GameObject)PrefabUtility.InstantiatePrefab(spawnPoint.spawnData.prefab);
            //adds spawned objects to list so the user can undo
              Undo.RegisterCreatedObjectUndo(spawnedThing, "Spawn Objects");
             spawnedThing.transform.position = spawnPoint.position;
@@ -230,7 +234,7 @@ public class testEditor : EditorWindow
 
                 GenerateRandomPoints();
             }
-            //  spawnPrefab = prefab; 
+            //  prefab= prefab; 
             rect.y += rect.height + 2;
         }
         Handles.EndGUI();
@@ -282,11 +286,11 @@ public class testEditor : EditorWindow
             {
                   foreach (SpawnPoint spawnPoint in spawnPoints)
                   { 
-                    if (spawnPoint.spawnData.spawnPrefab != null)
+                    if (spawnPoint.spawnData.prefab!= null)
                     {
                         // draw preview of all meshes in the prefab
                         Matrix4x4 poseToWorld = Matrix4x4.TRS(spawnPoint.position, spawnPoint.rotation, Vector3.one);
-                        DrawPrefab(spawnPoint.spawnData.spawnPrefab, poseToWorld, cam);
+                        DrawPrefab(spawnPoint.spawnData.prefab, poseToWorld, cam);
                     }
                     else
                     {
@@ -300,19 +304,10 @@ public class testEditor : EditorWindow
             {
                  Ray singleRay = HandleUtility.GUIPointToWorldRay(Event.current.mousePosition); 
                 if(Physics.Raycast(singleRay, out RaycastHit hit)) 
-                { 
-                    if (spawnPrefab != null)
-                    {
-                        // draw preview of all meshes in the prefab
-                          // Matrix4x4 poseToWorld = Matrix4x4.TRS(pose.position, pose.rotation, Vector3.one);
-                        //   DrawPrefab(spawnPrefab, hit.point);
-                    }
-                    else
-                    {
-                        // prefab missing, draw sphere and normal on surface instead 
+                {  
                         DrawSphere(hit.point);
                         Handles.DrawAAPolyLine(9, hit.point, hit.point + hit.normal);
-                    }
+                    
                 }
             } 
         }
